@@ -13,6 +13,7 @@ import (
 
 type DWR910M struct {
 	Address string
+	C       http.Client
 }
 
 type Message struct {
@@ -54,8 +55,8 @@ type Status struct {
 }
 
 // create a new instance of the api
-func New(address string) *DWR910M {
-	return &DWR910M{Address: address}
+func New(address string, timeout time.Duration) *DWR910M {
+	return &DWR910M{Address: address, C: http.Client{Timeout: timeout}}
 }
 
 // get the value of a property by its tag name
@@ -74,7 +75,7 @@ func getPropertyByTagName(text, name string) (string, error) {
 // get the values from the dashboard page
 func (dwr *DWR910M) GetStatus() (*Status, error) {
 	// fetch the dashboard page
-	res, e := http.Get(dwr.Address + "/jsonp_dashboard?")
+	res, e := dwr.C.Get(dwr.Address + "/jsonp_dashboard?")
 	if e != nil {
 		return nil, e
 	}
@@ -189,7 +190,7 @@ func (dwr *DWR910M) GetMessages(count int) ([]Message, error) {
 	}
 
 	// fetch the first page of messages
-	res, e := http.Get(dwr.Address + "/PageList?pageIndex=1")
+	res, e := dwr.C.Get(dwr.Address + "/PageList?pageIndex=1")
 	if e != nil {
 		return nil, e
 	}
@@ -215,7 +216,7 @@ func (dwr *DWR910M) GetMessages(count int) ([]Message, error) {
 
 	// fetch the rest of the messages
 	for len(m) < count && messages.CurrentPage < messages.TotalPages {
-		res, e = http.Get(dwr.Address + fmt.Sprintf("/PageList?pageIndex=%d", messages.CurrentPage+1))
+		res, e = dwr.C.Get(dwr.Address + fmt.Sprintf("/PageList?pageIndex=%d", messages.CurrentPage+1))
 		if e != nil {
 			return nil, e
 		}
